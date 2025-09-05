@@ -1,0 +1,98 @@
+Setting up cronjobs for production 
+
+cron is user specific service.
+
+you will get mail like 
+Hello Team,
+Please set up a cron for following URL :
+https://post-booking.cidcohomes.com/admin/cron_appointments_schedule/getResubmittedDocumentsOther
+keep the time interval same as other Postbooking cron's.
+
+Hello Team,
+Please set up a cron for following URL :
+http://booking.cidcohomes.com/admin/cron_appointments_schedule/getResubmittedDocumentsOther
+keep the time interval same as other rest booking cron's.
+
+between post-booking and restbook there is difference
+
+step -1 
+		you need to switch on the cron server.
+		all cron jobs stored on the cron server and the server can be accessible by ubuntu user.
+		su ubuntu
+		enter cron for switching on cron server.
+		Now sudo su for switch to root user.
+		cd /Data/cron/ - the location where all cron jobs located.
+		crontab -l -- for view the current cronjobs. and you have to be root user now.
+step - 2
+		create a script for running the crons
+		#!/bin/bash
+
+# Define the log directory and use the current date for the log file name
+LOG_DIR="/Apachelog/log/cronlogs/getResubmittedDocumentsOther"  # log file name should be specific for the script. 
+LOG_FILE="$LOG_DIR/$(date '+%d-%m-%Y').log"
+
+# URL to be called by wget  ## you need to change this url to provided url
+URL="https://post-booking.cidcohomes.com/admin/cron_appointments_schedule/getResubmittedDocumentsOther"
+
+# Email alert configuration
+EMAIL_FILE="/Data/cron/email-list.txt"
+SUBJECT="Cron Job Alert: Responsible Person-Ashwin"  ## need to change responsible person name.
+TMP_FILE="/tmp/cron_error_email.txt"
+
+# Read the email addresses from the file into a variable
+EMAILS=$(cat "$EMAIL_FILE")
+
+# Ensure the log directory exists
+mkdir -p "$LOG_DIR"
+
+# Log the start time
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting cron job..." >> "$LOG_FILE"
+
+# Run wget with error messages enabled, capture output and status
+OUTPUT=$(/usr/bin/wget --no-verbose -O - "$URL" 2>&1)
+STATUS=$?
+
+# Log the wget output with timestamp
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Output: $OUTPUT" >> "$LOG_FILE"
+
+# If wget fails, send an email alert to all recipients
+if [ $STATUS -ne 0 ]; then
+    echo "[$(date '+%d-%m-%Y %H:%M:%S')] Error: wget command failed" >> "$LOG_FILE"
+    echo "Subject: $SUBJECT" > "$TMP_FILE"
+    echo "Cron job failed at $(date '+%d-%m-%Y %H:%M:%S')" >> "$TMP_FILE"
+    echo "Error Output:" >> "$TMP_FILE"
+    echo "$OUTPUT" >> "$TMP_FILE"
+
+    # Send the email to all recipients
+    for EMAIL in $EMAILS; do
+        /usr/sbin/sendmail "$EMAIL" < "$TMP_FILE"
+        echo "[$(date '+%d-%m-%Y %H:%M:%S')] Alert email sent to $EMAIL" >> "$LOG_FILE"
+    done
+
+    rm -f "$TMP_FILE"
+fi
+
+# Log the completion time
+echo "[$(date '+%d-%m-%Y %H:%M:%S')] Cron job completed." >> "$LOG_FILE"
+echo "----------------------------------------" >> "$LOG_FILE"
+echo "----------------------------------------" >> "$LOG_FILE"
+
+
+
+		
+		file name should be  based on provided url.
+
+https://post-booking.cidcohomes.com/admin/cron_appointments_schedule/getResubmittedDocumentsOther"
+		
+		file_name- getResubmittedDocumentsOther.sh
+				
+step 3-
+		set up the cronjob for the script.
+		crontab -l
+		add cron in the list 
+		0   01 * *  * /Data/cron/getResubmittedDocumentsOther.sh
+
+step- 4
+		for testing run script manually
+		and check the log file for output which is stored in 
+		/Apachelog/log/cronlogs/getResubmittedDocumentsOther location
