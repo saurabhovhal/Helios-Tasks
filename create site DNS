@@ -1,0 +1,97 @@
+manual create a file on /var/www/html/postbookdev location.
+url-: post-bookdev.cidcohomes.com.conf  
+ 
+ vi post-bookdev.cidcohomes.com.conf
+
+<VirtualHost *:80>
+        ServerAdmin yuvraj.c@triphobo.com
+        DocumentRoot /var/www/html/postbookdev 	#/* change this path to your location
+
+        ServerName post-bookdev.cidcohomes.com   #/* change the serverName
+
+         <Directory /var/www/html/postbookdev>    #/* change this path to your location
+                Options FollowSymLinks MultiViews
+                AllowOverride None
+                Require all granted
+        </Directory>
+
+DirectoryIndex  index.php
+## Protect files and directories from prying eyes.
+<FilesMatch "\.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|theme|tpl(\.php)?|xtmpl|svn-base)$|^(code-style\
+.pl|Entries.*|Repository|Root|Tag|Template|all-wcprops|entries|format)$">
+  Order allow,deny
+</FilesMatch>
+
+#Header set Access-Control-Allow-Origin: *
+#Header set Access-Control-Allow-Headers: *
+#Header set Access-Control-Allow-Methods: *
+#Header set Access-Control-Allow-Methods: POST
+
+#<FilesMatch "\.(ttf|otf|eot|woff|woff2|svg)$">
+#                       Header set Access-Control-Allow-Origin "*"
+#               </FilesMatch>
+
+## Don't show directory listings for URLs which map to a directory.
+#Options -Indexes
+
+
+## Rewrite
+<IfModule mod_rewrite.c>
+        RewriteEngine On
+        RewriteMap escape int:escape
+        RewriteCond /var/www/html/postbookdev%{REQUEST_FILENAME} !-f  	#/* change this path to your location
+        RewriteCond /var/www/html/postbookdev%{REQUEST_FILENAME} !-d  	#/* change this path to your location
+        RewriteRule ^.*$ /index.php [L,PT]
+
+</IfModule>
+
+
+
+        ScriptAlias /cgi-bin/ /usr/lib/cgi-bin/
+        <Directory "/usr/lib/cgi-bin">
+                AllowOverride None
+                Require all granted
+                Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        ErrorLog /var/log/apache2/websites/post-bookdev.cidcohomes.com_error.log  # change log file name
+
+        # Possible values include: debug, info, notice, warn, error, crit,
+        # alert, emerg.
+        LogLevel warn
+
+        CustomLog /var/log/apache2/websites/post-bookdev.cidcohomes.com_access.log combined 	#change custom log file name
+
+    Alias /doc/ "/usr/share/doc/"
+    <Directory "/usr/share/doc/">
+        Options Indexes MultiViews FollowSymLinks
+        AllowOverride None
+        Require all granted
+        Order deny,allow
+        Deny from all
+        Allow from all
+    </Directory>
+
+</VirtualHost>
+<IfModule mod_ssl.c>
+
+
+run the command for checking the syntax is right or wrong.
+		sudo apachectl configtest
+
+command for enableing the site.
+
+	sudo e2ensite post-bookdev.cidcohomes.com.conf
+
+command for disabled the site.
+	
+	sudo e2dissite post-bookdev.cidcohomes.com.conf
+	
+automatically file will create post-bookdev.cidcohomes.com.conf at /etc/apache2/sites-enabled location
+after relaod the apache2 daemon the file will accessed 
+
+we need to create entry on dns server for url.
+for localhost we need to add the ip over the url in /etc/host location.
+and also create host entry in hosts file on windows.
