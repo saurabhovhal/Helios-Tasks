@@ -1,0 +1,28 @@
+Export-- 
+mysqldump -h new-prod-serverless-cluster-cluster.cluster-cimwyzcizqnc.ap-south-1.rds.amazonaws.com  -u root -p lotteryprodhousem payment_schedule_installments > /home/ubuntu/lotteryprodhousem_payment_schedule_installments.sql
+
+export local DB--
+mysqldump -u root -p lotterydevhousem applicant_progress_stepper > /home/ubuntu/saurabh/lotterydevhousem_applicant_progress_stepper.sql
+
+Import--  
+mysql -h new-prod-serverless-cluster-cluster.cluster-cimwyzcizqnc.ap-south-1.rds.amazonaws.com -u	root -p lotterydevhousem  < /home/ubuntu/lotteryprodhousem-exclude-tmp-table-22-05-25-bk.sql
+
+user creations--
+SELECT user, host FROM mysql.user;
+CREATE USER 'prashant'@'%' IDENTIFIED BY 'prashant@123!';
+ALTER USER 'shubham'@'%' IDENTIFIED BY 'Shubham@602';
+DROP USER test_saurabh;
+
+sql safe mode --
+SET SQL_SAFE_UPDATES = 0;
+
+
+permissions--
+GRANT ALL PRIVILEGES ON * .* TO 'shubham'@'%' WITH GRANT OPTION;
+GRANT SELECT, LOCK TABLES, SHOW VIEW, EVENT, TRIGGER ON lotteryprodhousem.* TO 'siddhi'@'%';
+GRANT PROCESS ON *.* TO 'siddhi'@'%';
+SHOW GRANTS FOR 'prashant'@'%'; 
+GRANT ALL PRIVILEGES ON lotterydevhousem .* TO 'shubham'@'%' WITH GRANT OPTION;
+GRANT SELECT ON *.* TO 'siddhi'@'%' WITH GRANT OPTION;
+GRANT SELECT ON lotterydevhousem.* TO 'siddhi'@'%';
+FLUSH PRIVILEGES;
