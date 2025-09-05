@@ -1,0 +1,57 @@
+for generating the certs---   
+		certbot certonly --manual --preferred-challenges=dns --email devops@heliosadvisory.com --server https://acme-v02.api.letsencrypt.org/directory --agree-tos -d *.heliosadvisory.com -d heliosadvisory.com
+
+fullchain pem-- 					
+		cp /etc/letsencrypt/live/heliosadvisory.com/fullchain.pem /etc/ssl/certs/heliosadvisory.com.crt
+private pem key--
+		 cp /etc/letsencrypt/live/heliosadvisory.com/privkey.pem /etc/ssl/certs/heliosadvisory.com.key
+
+optional--
+/etc/apache2/sites-available/default-ssl.conf
+    						Update (or ensure) these lines exist:
+						SSLEngine on
+						SSLCertificateFile    /etc/ssl/certs/heliosadvisory.com.crt
+						SSLCertificateKeyFile /etc/ssl/certs/heliosadvisory.com.key
+
+
+Then enable SSL site and reload modules--
+			a2enmod ssl
+			a2ensite default-ssl.conf
+
+
+
+systemctl restart apache2.service
+
+systemctl status apache2.service
+
+
+-----------------------------------------------------------------------------------------------------------------------
+
+for generating the certs---   
+		certbot certonly --manual --preferred-challenges=dns --email devops@heliosadvisory.com --server https://acme-v02.api.letsencrypt.org/directory --agree-tos -d *.heliosmediumbazaar.com -d heliosmediumbazaar.com
+
+fullchain pem-- 					
+		cp /etc/letsencrypt/live/heliosmediumbazaar.com/fullchain.pem /etc/ssl/certs/heliosmediumbazaar.com.crt
+private pem key--
+		 cp /etc/letsencrypt/live/heliosmediumbazaar.com/privkey.pem /etc/ssl/certs/heliosmediumbazaar.com.key
+
+optional--
+/etc/apache2/sites-available/default-ssl.conf
+    						Update (or ensure) these lines exist:
+						SSLEngine on
+						SSLCertificateFile    /etc/ssl/certs/heliosmediumbazaar.com.crt
+						SSLCertificateKeyFile /etc/ssl/certs/heliosmediumbazaar.com.key
+
+
+Then enable SSL site and reload modules--
+			a2enmod ssl
+			a2ensite default-ssl.conf
+
+
+
+systemctl restart apache2.service
+
+systemctl status apache2.service
+
+
+
