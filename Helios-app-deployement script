@@ -1,0 +1,259 @@
+#!/bin/bash
+
+# === Developer List ===
+developers=(
+  "Aditya Kokate"
+  "Prashant Patil"
+  "Bhagyashree Watkar"
+  "Siddhi Mirashi"
+  "Pavan Potdar"
+  "Ashwin Khandave"
+  "Machhindra Zankar"
+)
+
+# === Application Configurations ===
+declare -A app_dev_dirs=(
+  [rest]="/Data/dev/DEVrestapi"
+  [restapi]="/Data/dev/DEVrestapi"
+  [restbook]="/Data/dev/DEVrestapi"
+  [postbooking]="/Data/dev/devpostbooking"
+  [postbooking_all]="/Data/dev/devpostbooking"
+  [postbook]="/Data/dev/devpostbook"
+  [postbook_all]="/Data/dev/devpostbook"
+  [hcrmuat]="/Data/dev/hcrmdev"
+  [hcrmbook]="/Data/dev/hcrmdev"
+  [cidcohomes]="/Data/dev/infouat"
+)
+
+declare -A app_prod_dirs=(
+  [restapi]="/Data/www/html/restapi"
+  [restbook]="/Data/dev/2nd-phase/restbook"
+  [postbooking]="/Data/www/html/postbooking"
+  [postbooking_all]="/Data/www/html/postbooking"
+  [postbook]="/Data/www/html/postbook"
+  [postbook_all]="/Data/www/html/postbook"
+  [hcrmuat]="/Data/www/html/hcrmuat"
+  [hcrmbook]="/Data/dev/2nd-phase/hcrmbook"
+  [cidcohomes]="/Data/www/html/infoprod"
+)
+
+declare -A app_file_lists=(
+  [rest]="/Data/deployment/rest.txt"
+  [postbooking]="/Data/deployment/postbooking.txt"
+  [postbook]="/Data/deployment/postbook.txt"
+  [hcrmuat]="/Data/deployment/hcrmuat.txt"
+  [hcrmbook]="/Data/deployment/hcrmbook.txt"
+  [cidcohomes]="/Data/deployement/liveinfoprod.txt"
+)
+
+declare -A app_log_dirs=(
+  [rest]="/Apachelog/deployment-logs/restlogs"
+  [postbooking]="/Apachelog/deployment-logs/postbookinglogs"
+  [postbook]="/Apachelog/deployment-logs/postbooklogs"
+  [hcrmuat]="/Apachelog/deployment-logs/hcrmuatlogs"
+  [hcrmbook]="/Apachelog/deployment-logs/hcrmbooklogs"
+  [cidcohomes]="/Apachelog/deployment-logs/cidcohomeslogs"
+)
+
+cidco_distribution_id="E2YUWY2LCD5037"
+
+# === Normalize Paths ===
+normalize_paths() {
+  local app=$1
+  local input_file="/Data/deployment/path.txt"
+  local output_file="${app_file_lists[$app]}"
+
+  echo "🔄 Normalizing paths from $input_file --> $output_file"
+  if [[ ! -f $input_file ]]; then
+    echo "❌ Error: path.txt not found"
+    return 1
+  fi
+  mkdir -p "$(dirname "$output_file")"
+  > "$output_file"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" ]] && continue
+    for raw_path in $line; do
+      cleaned=$(echo "$raw_path" | sed 's|\\|/|g' | sed 's|//*|/|g' | sed 's|^/||')
+      cleaned=${cleaned#Data/dev/*/}
+      echo "$cleaned" >> "$output_file"
+    done
+  done < "$input_file"
+  echo "✅ Normalized paths saved to $output_file"
+}
+
+# === Select Application ===
+echo "Select Application to Deploy:"
+echo "1) rest"
+echo "2) postbooking"
+echo "3) postbook"
+echo "4) hcrmuat"
+echo "5) cidcohomes"
+read -p "Enter choice (1-5): " app_choice
+case $app_choice in
+  1) APP="rest" ;;
+  2) APP="postbooking" ;;
+  3) APP="postbook" ;;
+  4) APP="hcrmuat" ;;
+  5) APP="cidcohomes" ;;
+  *) echo "❌ Invalid application."; exit 1 ;;
+esac
+
+# === Select Developer ===
+echo -e "\nSelect Developer:"
+for i in "${!developers[@]}"; do
+  echo "$((i+1)). ${developers[$i]}"
+done
+read -p "Enter developer number (1-${#developers[@]}): " dev_num
+(( dev_num < 1 || dev_num > ${#developers[@]} )) && { echo "❌ Invalid selection"; exit 1; }
+dev_name="${developers[$((dev_num-1))]}"
+echo "✅ Developer Selected: $dev_name"
+
+# === Platform Selection (skip for cidcohomes) ===
+platforms=()
+if [[ "$APP" != "cidcohomes" ]]; then
+  if [[ "$APP" == "rest" ]]; then
+    echo "Select platform:"
+    echo "1) REST Book"
+    echo "2) REST API"
+    echo "3) Both"
+    read -p "Enter choice: " opt
+    case $opt in
+      1) platforms=("restbook") ;;
+      2) platforms=("restapi") ;;
+      3) platforms=("restbook" "restapi") ;;
+      *) exit 1 ;;
+    esac
+  elif [[ "$APP" == "postbooking" ]]; then
+    echo "Select platform:"
+    echo "1) postbooking"
+    echo "2) all"
+    read -p "Enter choice: " opt
+    case $opt in
+      1) platforms=("postbooking") ;;
+      2) platforms=("postbooking" "postbooking_all") ;;
+      *) exit 1 ;;
+    esac
+  elif [[ "$APP" == "postbook" ]]; then
+    echo "Select platform:"
+    echo "1) postbook"
+    echo "2) all"
+    read -p "Enter choice: " opt
+    case $opt in
+      1) platforms=("postbook") ;;
+      2) platforms=("postbook" "postbook_all") ;;
+      *) exit 1 ;;
+    esac
+  elif [[ "$APP" == "hcrmuat" ]]; then
+    echo "Select platform:"
+    echo "1) hcrmbook"
+    echo "2) hcrmuat"
+    echo "3) all"
+    read -p "Enter choice: " opt
+    case $opt in
+      1) platforms=("hcrmbook") ;;
+      2) platforms=("hcrmuat") ;;
+      3) platforms=("hcrmbook" "hcrmuat") ;;
+      *) exit 1 ;;
+    esac
+  fi
+fi
+
+# === Git Pull & Normalize Paths ===
+if [[ "$APP" == "hcrmbook" && " ${platforms[*]} " =~ " hcrmuat " && ! " ${platforms[*]} " =~ " hcrmbook " ]]; then
+  cd "${app_dev_dirs[hcrmuat]}" || { echo "❌ Cannot cd to ${app_dev_dirs[hcrmuat]}"; exit 1; }
+  git pull || { echo "❌ Git pull failed"; exit 1; }
+ # normalize_paths "hcrmbook" || exit 1
+  normalize_paths "$APP" || exit 1
+  FILE_LIST="${app_file_lists[hcrmuat]}"
+else
+  cd "${app_dev_dirs[$APP]}" || { echo "❌ Cannot cd to ${app_dev_dirs[$APP]}"; exit 1; }
+  git pull || { echo "❌ Git pull failed"; exit 1; }
+  normalize_paths "$APP" || exit 1
+  FILE_LIST="${app_file_lists[$APP]}"
+fi
+
+# === Prepare Log ===
+LOG_DIR="/Apachelog/deployment-logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/$(date +%d-%m-%Y).log"
+PRIVATE_IP=$(hostname -I | awk '{print $1}')
+{
+  echo "------------------------------------------------------------"
+  echo "Application       : $APP"
+  echo "Run Date          : $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "Developer         : $dev_name"
+  echo "Host              : $(hostname)"
+  echo "Executed by user  : $(whoami) | Original user (SUDO_USER): ${SUDO_USER:-N/A}"
+  echo "Private IP        : ${PRIVATE_IP:-Unavailable}"
+  echo "------------------------------------------------------------"
+} >> "$LOG_FILE"
+
+# === File Selection ===
+mapfile -t all_files < <(grep -v '^$' "$FILE_LIST")
+echo -e "\nAvailable files:"
+for i in "${!all_files[@]}"; do
+  echo "$((i+1))) ${all_files[$i]}"
+done
+while true; do
+  read -p "Enter file numbers (space separated) or 'a' for all: " input
+  if [[ "$input" == "a" ]]; then
+    selections=("${all_files[@]}")
+    break
+  elif [[ "$input" =~ ^[0-9\ ]+$ ]]; then
+    selections=()
+    for num in $input; do
+      ((num--))
+      [[ -n "${all_files[$num]}" ]] && selections+=("${all_files[$num]}")
+    done
+    break
+  else
+    echo "⚠️ Invalid input. Try again."
+  fi
+done
+
+# === Deploy Files ===
+echo -e "\n🚀 Deploying files..."
+if [[ "$APP" == "cidcohomes" ]]; then
+  platforms=("$APP")
+elif [[ "$APP" == "hcrmbook" && " ${platforms[*]} " =~ " hcrmuat " && ! " ${platforms[*]} " =~ " hcrmbook " ]]; then
+  platforms=("hcrmuat")
+fi
+
+for platform in "${platforms[@]:-$APP}"; do
+  SRC_DIR="${app_dev_dirs[$platform]}"
+  DEST_DIR="${app_prod_dirs[$platform]}"
+  for file in "${selections[@]}"; do
+    src="$SRC_DIR/$file"
+    dest="$DEST_DIR/$file"
+
+    if [[ ! -f "$src" ]]; then
+      echo "Skipping $file for $platform... ❌ Not found"
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$platform] File: $file --> ❌ Not Found" >> "$LOG_FILE"
+      continue
+    fi
+
+    echo -n "Deploying $file to $platform... "
+    if php -l "$src" > /dev/null 2>&1; then
+      mkdir -p "$(dirname "$dest")"
+      if cp -v "$src" "$dest"; then
+        echo "✅"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$platform] File: $file --> ✅ Copied" >> "$LOG_FILE"
+      else
+        echo "❌ Copy failed"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$platform] File: $file --> ❌ Copy Failed" >> "$LOG_FILE"
+      fi
+    else
+      echo "❌ PHP error"
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$platform] File: $file --> ❌ PHP Error" >> "$LOG_FILE"
+    fi
+  done
+done
+
+# === CloudFront Invalidation for cidcohomes ===
+if [[ "$APP" == "cidcohomes" ]]; then
+  read -p "Do you want to invalidate CloudFront cache for distribution ID $cidco_distribution_id (/*)? (y/n): " confirm_invalidate
+  [[ "$confirm_invalidate" == "y" ]] && aws cloudfront create-invalidation --distribution-id "$cidco_distribution_id" --paths "/*"
+fi
+
+echo -e "\n✅ Deployment completed. Logs saved to $LOG_FILE"
+exit 0
