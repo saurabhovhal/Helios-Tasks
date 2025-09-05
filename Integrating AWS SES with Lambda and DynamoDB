@@ -1,0 +1,47 @@
+Purpose 
+To automate the process of handling SES email notifications (bounces, complaints, 
+deliveries, opens, clicks) by capturing them via an SNS topic, processing through a Lambda 
+function, and storing structured records in DynamoDB. 
+1. Create a DynamoDB Table 
+Table Name: SESNotifications 
+Partition Key: SESMessageID (String) 
+Sort Key: SNSPublishTime (String) 
+Other Attributes (optional based on requirements): 
+● FromAddress 
+● Recipient 
+● SubjectLine 
+● SendDate 
+● ISP 
+● DeliveryEvent 
+● EngagementEvent 
+● CurrentDate 
+● MessageDetails 
+● emailAddress 
+2. Create an SNS Topic 
+Topic Name: SESEventNotifications 
+Steps: 
+● Go to SNS > Topics > Create Topic. 
+● Type: Standard. 
+● Configure access policy to allow SES to publish to this topic. 
+3. Configure SES to Send Notifications to SNS 
+● Navigate to SES > Verified Identities > [your domain/email] > Notifications. 
+● For each event type (Bounce, Complaint, Delivery): 
+● Set the destination to your created SNS topic (SESEventNotifications). 
+4. Create a Lambda Function 
+● Function Name: SESNotificationHandler 
+● Runtime: Python 3.11 / Node.js / your preference 
+5. Attach an IAM Role to Lambda 
+Create an IAM Role with permissions: 
+Attach this IAM Role to your Lambda function. 
+6. Subscribe Lambda to the SNS Topic 
+● In SNS > Subscriptions > Create Subscription: 
+○ Protocol: Lambda 
+○ Endpoint: Your Lambda function 
+● Then, confirm the subscription by granting SNS permission to invoke your Lambda. 
+7. Test End-to-End 
+● Send a test email via SES. 
+● Check: 
+● SNS received the event. 
+● Lambda invoked successfully. 
+● Record inserted in DynamoDB. 
+● No errors in Lambda CloudWatch logs.
