@@ -1,0 +1,104 @@
+AWS RDS Cluster Setup and Management. 
+
+
+
+
+ Step 1: Sign in to AWS Console
+- Navigate to the RDS Dashboard (https://console.aws.amazon.com/rds/).
+
+
+
+
+ Step 2: Launch DB Cluster
+
+
+- Click on "Create database".
+- Choose Amazon Aurora as the engine.
+- Choose either Aurora MySQL.
+- Select Amazon Aurora with Aurora Replicas (replication-enabled).
+
+
+
+
+
+
+ Step 3: Specify DB Cluster Settings
+
+
+- DB Cluster Identifier
+- Master Username & Password
+- Instance Class (Writer & Reader nodes can be assigned different classes) 
+
+
+
+
+ Step 4: Configure Connectivity
+
+
+- Choose VPC, Subnet group, and Public Access.
+- Set VPC security groups
+
+
+ Step 5: Additional Configuration
+
+
+- Database options: Initial database name (optional).
+- Enable encryption, backup, monitoring as needed.
+
+
+Step 6: Launch 
+
+
+- Click "Create database" to launch the cluster.
+
+
+
+
+2. Creating a Database in RDS Cluster 
+
+
+Once the cluster is available:
+
+
+- Connect using an SQL client with the endpoint, username, and password.
+- Run SQL command: 
+CREATE DATABASE your_database_name;
+Alternatively, use AWS RDS Query Editor (Aurora-compatible versions only).
+
+
+ 3. Adding Writer and Reader Instances 
+
+
+Add Writer:
+- Only one writer is allowed in a cluster (Aurora).
+
+
+ Add Reader:
+- Navigate to RDS Console > Databases > Your Cluster- Click "Add reader".
+- Choose instance class and other parameters.
+- Click "Add reader" to launch.
+
+
+
+
+4. Reader Endpoint vs Writer Endpoint
+- Writer Endpoint: Used for write operations.
+ - Reader Endpoint: Used for read operations, load balanced across replicas.
+
+
+ 5. Scaling Readers (Aurora Auto Scaling) 
+
+
+Option 1: Manually Add/Remove Readers
+- Use "Add reader" to manually scale.
+- To remove, delete the replica instance
+        
+         Option 2: Aurora Auto Scaling 
+1. Go to RDS Console > Databases > Cluster
+2. Select the Reader Auto Scaling tab. 
+3. Configure policies: 
+- Min/Max replicas 
+- CPU utilization or custom CloudWatch metrics
+
+
+         AWS auto-scales read replicas based on policies.
