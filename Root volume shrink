@@ -1,0 +1,90 @@
+A) Prep (identify things)
+		# See disks/partitions
+		lsblk -f
+		sudo parted -l
+
+
+B) Partition the new disk (msdos + single ext4, boot flag)
+
+		sudo parted -s /dev/nvme1n1 mklabel msdos
+		sudo parted -s /dev/nvme1n1 mkpart primary ext4 1MiB 100%
+		sudo parted -s /dev/nvme1n1 set 1 boot on
+
+		# Make filesystem (tune -i if you like)
+		sudo mkfs.ext4 -i 4096 -L root20 /dev/nvme1n1p1
+
+
+C) Mount target and copy system (→ fix your rsync direction)
+
+		sudo mkdir -p /mnt/root
+		mount /dev/nvme1n1p1 /mnt/root
+
+		# Copy FROM / TO /mnt/root (your earlier command was reversed)
+		sudo rsync -aAXH --numeric-ids --info=progress2 \
+		  --exclude={"/mnt","/proc","/sys","/dev","/run","/tmp","/media","/lost+found"} \
+		  /  /mnt/root
+
+
+D) Prepare chroot
+		
+		mkdir -p /mnt/root/dev
+		mkdir -p /mnt/root/proc
+		mkdir -p /mnt/root/sys
+		mkdir -p /mnt/root/run
+		mkdir -p /mnt/root/tmp
+		mkdir -p /mnt/root/media
+
+		# Bind essential filesystems
+		for d in proc sys dev run; do sudo mount --rbind /$d /mnt/root/$d done
+
+		# Working /tmp in chroot
+		sudo mount -t tmpfs tmpfs /mnt/root/tmp
+		sudo chmod 1777 /mnt/root/tmp
+
+		# DNS + hostname fix inside chroot
+		sudo cp /etc/resolv.conf /mnt/root/etc/ || true
+		echo "127.0.1.1 $(hostname)" | sudo tee -a /mnt/root/etc/hosts
+
+		# Enter chroot
+		sudo chroot /mnt/root /bin/bash
+
+E) Install GRUB for BIOS and point it to the disk (not a partition)
+
+Inside the chroot:
+
+		apt update
+		apt install -y grub-pc      # BIOS GRUB
+
+		# Install GRUB to the MBR of the new disk
+		grub-install /dev/nvme1n1
+
+
+F) Update fstab to the new UUID
+
+Still inside chroot:
+
+		# Get the new root UUID
+		NEWUUID=$(blkid -s UUID -o value /dev/nvme1n1p1)
+
+		# Replace/ensure the root line in /etc/fstab
+		sed -i -E "s#^UUID=[^ ]+ +/ +ext4.*#UUID=${NEWUUID}  /  ext4  defaults  0  1#" /etc/fstab
+
+		# If there was no matching line, append one:
+		grep -q "UUID=${NEWUUID}  /  ext4" /etc/fstab || echo "UUID=${NEWUUID}  /  ext4  defaults  0  1" >> /etc/fstab
+
+		NEWPARTUUID=$(blkid -s PARTUUID -o value /dev/nvme1n1p1)
+		if [ -f /etc/default/grub.d/40-force-partuuid.cfg ]; then
+		  sed -i "s/PARTUUID=[^\" ]*/PARTUUID=${NEWPARTUUID}/" /etc/default/grub.d/40-force-partuuid.cfg
+		fi
+
+		update-grub
+		update-initramfs -u -k all
+		exit
+
+G) Clean unmounts
+
+		sudo umount -l -R /mnt/root
+
+************************prerequsite**************
+you have to attached one shrink volume to your aws instance
+*************************************************
